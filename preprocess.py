@@ -104,37 +104,53 @@ HOME_TEMPLATE = """
             <form method='post' action='/preprocess'><button class='btn' type='submit'>Run preprocessing</button></form>
             {% endif %}
         </div>
-        <div class='card'>
-            <h3>Plots</h3>
-            {% if plot_links %}
-                <ul>
-                {% for label, href in plot_links %}
-                    <li><a href='{{ href }}' target='_blank'>{{ label }}</a></li>
-                {% endfor %}
-                </ul>
-            {% else %}
-                <p>No plots found. Generate locally to the <code>plots/</code> folder.</p>
-            {% endif %}
-            <p>Health: <a href='/healthz'>/healthz</a></p>
-        </div>
+            <div class='card'>
+                <h3>Plots</h3>
+                {% if plot_links %}
+                    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;">
+                    {% for label, href in plot_links %}
+                        <div style="border:1px solid #eee;border-radius:8px;padding:8px;">
+                            <div style="font-size:14px;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ label }}</div>
+                            {% if href.endswith('.png') %}
+                                <a href='{{ href }}' target='_blank'><img src='{{ href }}' alt='{{ label }}' style='width:100%;height:140px;object-fit:cover;border-radius:6px;'/></a>
+                            {% else %}
+                                <a href='{{ href }}' target='_blank' class='btn'>Open</a>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                    </div>
+                {% else %}
+                    <p>No plots found. Generate locally to the <code>plots/</code> folder.</p>
+                {% endif %}
+                <p>Health: <a href='/healthz'>/healthz</a></p>
+            </div>
     </body>
 </html>
 """
 
 
+def _label_from_filename(name: str) -> str:
+    base = Path(name).stem.replace('_', ' ').strip()
+    return base[:1].upper() + base[1:]
+
+
 def _discover_plot_links() -> List[Tuple[str, str]]:
-        links: List[Tuple[str, str]] = []
-        candidates = [
-                ("Interactive: Area vs Price (plotly)", ADV_PLOTS_DIR / "interactive_area_price.html", "/advanced_plots/interactive_area_price.html"),
-                ("Price distribution", PLOTS_DIR / "price_distribution.png", "/plots/price_distribution.png"),
-                ("Area vs price", PLOTS_DIR / "area_vs_price.png", "/plots/area_vs_price.png"),
-                ("Price by location", PLOTS_DIR / "price_by_location.png", "/plots/price_by_location.png"),
-                ("Correlation heatmap", PLOTS_DIR / "correlation_heatmap.png", "/plots/correlation_heatmap.png"),
-        ]
-        for label, fpath, href in candidates:
-                if fpath.exists():
-                        links.append((label, href))
-        return links
+    links: List[Tuple[str, str]] = []
+
+    # All PNGs in plots/
+    if PLOTS_DIR.exists():
+        for f in sorted(PLOTS_DIR.glob('*.png')):
+            links.append((_label_from_filename(f.name), f"/plots/{f.name}"))
+
+    # PNG and HTML in advanced_plots/
+    if ADV_PLOTS_DIR.exists():
+        for ext in ("*.png", "*.html"):
+            for f in sorted(ADV_PLOTS_DIR.glob(ext)):
+                links.append((_label_from_filename(f.name), f"/advanced_plots/{f.name}"))
+
+    # Prefer to show interactive plot first if present
+    links.sort(key=lambda x: (0 if x[1].endswith('interactive_area_price.html') else 1, x[0]))
+    return links
 
 
 @app.get("/healthz")
