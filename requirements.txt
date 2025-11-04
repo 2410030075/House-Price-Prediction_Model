@@ -1,0 +1,5 @@
+Flask==3.0.3
+gunicorn==21.2.0
+# Versions compatible with Python 3.13 on Windows and on Render
+pandas==2.2.3
+numpy==2.1.2
