@@ -3,3 +3,5 @@ gunicorn==21.2.0
 # Versions compatible with Python 3.13 on Windows and on Render
 pandas==2.2.3
 numpy==2.1.2
+plotly==5.24.1
+scikit-learn==1.5.2
